@@ -1,0 +1,15 @@
+jdk:
+  - openjdk21
+before_install:
+  - sdk install maven
+install:
+  # 1. Replace the original Group ID with the JitPack Group ID in all pom.xml files
+  #    IMPORTANT: Replace 'YourUsername' with your actual GitHub username
+  #    IMPORTANT: Replace 'quarkus-mcp-server' if you renamed your repository
+  - find . -name "pom.xml" -exec sed -i "s/io.quarkiverse.mcp/com.github.SaSteffen.quarkus-mcp-server/g" {} +
+
+  # 2. Set the version to match the JitPack tag (fixes the 999-SNAPSHOT issue)
+  - mvn versions:set -DnewVersion=${VERSION} -DgenerateBackupPoms=false
+
+  # 3. Install the artifacts locally in the JitPack VM
+  - mvn clean install -DskipTests -Dmaven.javadoc.skip=true -Dmaven.source.skip=true
