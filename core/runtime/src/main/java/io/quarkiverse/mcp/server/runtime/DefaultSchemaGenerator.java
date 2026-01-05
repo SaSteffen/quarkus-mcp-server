@@ -124,17 +124,66 @@ public class DefaultSchemaGenerator implements GlobalInputSchemaGenerator, Globa
                     JsonNode node = propertiesObj.get(arg.name());
                     if (node != null) {
                         postProcessJsonNode(node, arg.type(), arg.description(), arg.defaultValue());
+                        // Also process $defs within each property
+                        if (node.isObject()) {
+                            postProcessDefinitions((ObjectNode) node);
+                        }
                     }
                 }
             }
+            // Post-process $defs to add "required" arrays
+            postProcessDefinitions(objectNode);
             return objectNode;
         }
         return jsonNode;
     }
 
+    private void postProcessDefinitions(ObjectNode schemaNode) {
+        JsonNode defsNode = schemaNode.get("$defs");
+        if (defsNode != null && defsNode.isObject()) {
+            ObjectNode defsObject = (ObjectNode) defsNode;
+            defsObject.fields().forEachRemaining(entry -> {
+                JsonNode defNode = entry.getValue();
+                if (defNode.isObject()) {
+                    ObjectNode defObject = (ObjectNode) defNode;
+                    addRequiredFieldsToDefinition(defObject);
+                    // Recursively process nested $defs
+                    postProcessDefinitions(defObject);
+                }
+            });
+        }
+    }
+
+    private void addRequiredFieldsToDefinition(ObjectNode defObject) {
+        JsonNode typeNode = defObject.get("type");
+        JsonNode propertiesNode = defObject.get("properties");
+
+        // Only process object types with properties
+        if (typeNode != null && "object".equals(typeNode.asText()) &&
+                propertiesNode != null && propertiesNode.isObject()) {
+
+            // Check if "required" already exists
+            if (defObject.get("required") == null) {
+                ObjectNode propertiesObj = (ObjectNode) propertiesNode;
+                var requiredArray = defObject.putArray("required");
+
+                // Add all property names to required array
+                // For Java records, all fields are required by default
+                propertiesObj.fieldNames().forEachRemaining(requiredArray::add);
+            }
+        }
+    }
+
     Object generateSchema(Type type, String description, String defaultValue) {
         JsonNode jsonNode = schemaGenerator.generateSchema(type);
         postProcessJsonNode(jsonNode, type, description, defaultValue);
+        // Also process $defs within the generated schema and add required to root object
+        if (jsonNode.isObject()) {
+            ObjectNode objectNode = (ObjectNode) jsonNode;
+            postProcessDefinitions(objectNode);
+            // Also add required fields to the root object itself
+            addRequiredFieldsToDefinition(objectNode);
+        }
         return jsonNode;
     }
 

@@ -83,6 +83,18 @@ public class ToolComplexArgumentTest extends McpServerTest {
                     assertNotNull(ref, "defaultAddress should use $ref to Address definition");
                     assertEquals("#/$defs/Address", ref,
                             "defaultAddress should reference Address via $ref");
+
+                    // Verify that Address definition has "required" property
+                    assertNotNull(addressDef.getJsonArray("required"),
+                            "Address definition in $defs should have 'required' property for non-optional fields");
+                    assertEquals(3, addressDef.getJsonArray("required").size(),
+                            "Address should have 3 required fields: street, city, zipCode");
+
+                    // Verify Customer object itself (the root) also has "required" property
+                    assertNotNull(customerProp.getJsonArray("required"),
+                            "Customer root object should have 'required' property for non-optional fields");
+                    assertEquals(3, customerProp.getJsonArray("required").size(),
+                            "Customer should have 3 required fields: name, email, defaultAddress");
                 })
                 .thenAssertResults();
     }
