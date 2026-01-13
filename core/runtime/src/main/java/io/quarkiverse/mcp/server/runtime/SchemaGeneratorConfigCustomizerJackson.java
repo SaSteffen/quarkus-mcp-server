@@ -3,7 +3,9 @@ package io.quarkiverse.mcp.server.runtime;
 import java.util.ArrayList;
 
 import jakarta.enterprise.context.Dependent;
+import jakarta.enterprise.inject.Instance;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.victools.jsonschema.generator.Module;
 import com.github.victools.jsonschema.generator.SchemaGeneratorConfigBuilder;
 import com.github.victools.jsonschema.module.jackson.JacksonModule;
@@ -15,9 +17,13 @@ import io.quarkiverse.mcp.server.runtime.config.McpServerSchemaGeneratorJacksonR
 public class SchemaGeneratorConfigCustomizerJackson implements SchemaGeneratorConfigCustomizer {
 
     private final McpServerSchemaGeneratorJacksonRuntimeConfig config;
+    private final Instance<ObjectMapper> objectMapperInstance;
 
-    public SchemaGeneratorConfigCustomizerJackson(McpServerSchemaGeneratorJacksonRuntimeConfig config) {
+    public SchemaGeneratorConfigCustomizerJackson(
+            McpServerSchemaGeneratorJacksonRuntimeConfig config,
+            Instance<ObjectMapper> objectMapperInstance) {
         this.config = config;
+        this.objectMapperInstance = objectMapperInstance;
     }
 
     @Override
@@ -30,6 +36,9 @@ public class SchemaGeneratorConfigCustomizerJackson implements SchemaGeneratorCo
     }
 
     Module createJacksonModule(JacksonOption[] options) {
+        if (objectMapperInstance.isResolvable()) {
+            return new JacksonModule(objectMapperInstance.get(), options);
+        }
         return new JacksonModule(options);
     }
 
