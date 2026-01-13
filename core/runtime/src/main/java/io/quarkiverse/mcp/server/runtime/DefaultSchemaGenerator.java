@@ -4,9 +4,11 @@ import java.lang.reflect.Type;
 import java.util.List;
 import java.util.Map;
 
+import jakarta.enterprise.inject.Instance;
 import jakarta.inject.Singleton;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.github.victools.jsonschema.generator.Option;
 import com.github.victools.jsonschema.generator.OptionPreset;
@@ -35,8 +37,9 @@ public class DefaultSchemaGenerator implements GlobalInputSchemaGenerator, Globa
     final Map<Type, DefaultValueConverter<?>> defaultValueConverters;
 
     public DefaultSchemaGenerator(@All List<SchemaGeneratorConfigCustomizer> schemaGeneratorConfigCustomizers,
-            McpMetadata metadata) {
-        this.schemaGenerator = constructSchemaGenerator(schemaGeneratorConfigCustomizers);
+            McpMetadata metadata,
+            Instance<ObjectMapper> objectMapperInstance) {
+        this.schemaGenerator = constructSchemaGenerator(schemaGeneratorConfigCustomizers, objectMapperInstance);
         this.toolArgumentHolders = metadata.toolArgumentHolders();
         this.defaultValueConverters = metadata.defaultValueConverters();
     }
@@ -104,9 +107,18 @@ public class DefaultSchemaGenerator implements GlobalInputSchemaGenerator, Globa
     }
 
     private static SchemaGenerator constructSchemaGenerator(
-            List<SchemaGeneratorConfigCustomizer> schemaGeneratorConfigCustomizers) {
-        var configBuilder = new SchemaGeneratorConfigBuilder(SchemaVersion.DRAFT_2020_12, OptionPreset.PLAIN_JSON)
-                .without(Option.SCHEMA_VERSION_INDICATOR);
+            List<SchemaGeneratorConfigCustomizer> schemaGeneratorConfigCustomizers,
+            Instance<ObjectMapper> objectMapperInstance) {
+        SchemaGeneratorConfigBuilder configBuilder;
+        if (objectMapperInstance.isResolvable()) {
+            configBuilder = new SchemaGeneratorConfigBuilder(
+                    objectMapperInstance.get(),
+                    SchemaVersion.DRAFT_2020_12,
+                    OptionPreset.PLAIN_JSON);
+        } else {
+            configBuilder = new SchemaGeneratorConfigBuilder(SchemaVersion.DRAFT_2020_12, OptionPreset.PLAIN_JSON);
+        }
+        configBuilder.without(Option.SCHEMA_VERSION_INDICATOR);
         for (SchemaGeneratorConfigCustomizer customizer : schemaGeneratorConfigCustomizers) {
             customizer.customize(configBuilder);
         }
