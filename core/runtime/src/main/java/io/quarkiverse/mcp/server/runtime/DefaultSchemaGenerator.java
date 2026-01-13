@@ -147,7 +147,9 @@ public class DefaultSchemaGenerator implements GlobalInputSchemaGenerator, Globa
                 // We need to extract the value property and replace the original object node
                 ObjectNode valueProp = objectNode.withObjectProperty("properties").withObjectProperty("value");
                 if (valueProp != null) {
-                    objectNode = valueProp;
+                    // Copy all fields from valueProp to the parent objectNode
+                    objectNode.removeAll();
+                    objectNode.setAll(valueProp);
                 }
             }
             if (description != null && !description.isBlank()) {
