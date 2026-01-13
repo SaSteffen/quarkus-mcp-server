@@ -115,6 +115,7 @@ public class DefaultSchemaGenerator implements GlobalInputSchemaGenerator, Globa
 
     JsonNode generateSchema(Class<?> holderClass, List<ToolArgument> toolArguments) {
         JsonNode jsonNode = schemaGenerator.generateSchema(holderClass);
+        System.out.println("DEBUG: Generated schema for " + holderClass.getName() + ": " + jsonNode.toString());
         if (jsonNode.isObject()) {
             ObjectNode objectNode = (ObjectNode) jsonNode;
             JsonNode propertiesNode = objectNode.get("properties");
