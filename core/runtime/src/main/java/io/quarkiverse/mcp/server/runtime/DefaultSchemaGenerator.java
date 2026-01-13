@@ -4,11 +4,9 @@ import java.lang.reflect.Type;
 import java.util.List;
 import java.util.Map;
 
-import jakarta.enterprise.inject.Instance;
 import jakarta.inject.Singleton;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.github.victools.jsonschema.generator.Option;
 import com.github.victools.jsonschema.generator.OptionPreset;
@@ -37,9 +35,8 @@ public class DefaultSchemaGenerator implements GlobalInputSchemaGenerator, Globa
     final Map<Type, DefaultValueConverter<?>> defaultValueConverters;
 
     public DefaultSchemaGenerator(@All List<SchemaGeneratorConfigCustomizer> schemaGeneratorConfigCustomizers,
-            McpMetadata metadata,
-            Instance<ObjectMapper> objectMapperInstance) {
-        this.schemaGenerator = constructSchemaGenerator(schemaGeneratorConfigCustomizers, objectMapperInstance);
+            McpMetadata metadata) {
+        this.schemaGenerator = constructSchemaGenerator(schemaGeneratorConfigCustomizers);
         this.toolArgumentHolders = metadata.toolArgumentHolders();
         this.defaultValueConverters = metadata.defaultValueConverters();
     }
@@ -107,17 +104,13 @@ public class DefaultSchemaGenerator implements GlobalInputSchemaGenerator, Globa
     }
 
     private static SchemaGenerator constructSchemaGenerator(
-            List<SchemaGeneratorConfigCustomizer> schemaGeneratorConfigCustomizers,
-            Instance<ObjectMapper> objectMapperInstance) {
-        SchemaGeneratorConfigBuilder configBuilder;
-        if (objectMapperInstance.isResolvable()) {
-            configBuilder = new SchemaGeneratorConfigBuilder(
-                    objectMapperInstance.get(),
-                    SchemaVersion.DRAFT_2020_12,
-                    OptionPreset.PLAIN_JSON);
-        } else {
-            configBuilder = new SchemaGeneratorConfigBuilder(SchemaVersion.DRAFT_2020_12, OptionPreset.PLAIN_JSON);
-        }
+            List<SchemaGeneratorConfigCustomizer> schemaGeneratorConfigCustomizers) {
+        // Note: Do NOT pass ObjectMapper to SchemaGeneratorConfigBuilder for Kotlin data classes
+        // The default TypeContext handles Kotlin field introspection correctly
+        // Passing ObjectMapper switches to Jackson-based introspection which may not see Kotlin properties
+        SchemaGeneratorConfigBuilder configBuilder = new SchemaGeneratorConfigBuilder(
+                SchemaVersion.DRAFT_2020_12,
+                OptionPreset.PLAIN_JSON);
         configBuilder.without(Option.SCHEMA_VERSION_INDICATOR);
         for (SchemaGeneratorConfigCustomizer customizer : schemaGeneratorConfigCustomizers) {
             customizer.customize(configBuilder);
